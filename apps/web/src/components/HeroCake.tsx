@@ -10,6 +10,7 @@ export default function HeroCake() {
   // Total of images
   const frameCount = 35;
   const images = useRef<HTMLImageElement[]>([]);
+  const [firstFrameLoaded, setFirstFrameLoaded] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
   // Captura o scroll relativo ao contêiner hero
@@ -18,22 +19,34 @@ export default function HeroCake() {
     offset: ["start start", "end end"]
   });
 
-  // Preload das imagens
+  // Preload das imagens com carregamento progressivo e instantâneo do primeiro frame
   useEffect(() => {
-    let loadedCount = 0;
-    for (let i = 1; i <= frameCount; i++) {
-      const img = new Image();
-      // Format number to 3 digits (e.g. 001, 002)
-      const paddedIndex = i.toString().padStart(3, '0');
-      img.src = `/assets/cake-sequence/ezgif-frame-${paddedIndex}.jpg`;
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === frameCount) {
-          setImagesLoaded(true);
-        }
-      };
-      images.current.push(img);
-    }
+    const imgList: HTMLImageElement[] = [];
+    
+    // 1. Carrega o primeiro frame imediatamente para exibição instantânea
+    const firstImg = new Image();
+    firstImg.src = `/assets/cake-sequence/ezgif-frame-001.jpg`;
+    firstImg.onload = () => {
+      setFirstFrameLoaded(true);
+      
+      // 2. Carrega as outras imagens em segundo plano
+      let loadedCount = 1;
+      for (let i = 2; i <= frameCount; i++) {
+        const img = new Image();
+        const paddedIndex = i.toString().padStart(3, '0');
+        img.src = `/assets/cake-sequence/ezgif-frame-${paddedIndex}.jpg`;
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === frameCount) {
+            setImagesLoaded(true);
+          }
+        };
+        imgList[i - 1] = img;
+      }
+    };
+    
+    imgList[0] = firstImg;
+    images.current = imgList;
   }, []);
 
   // Frame calculation based on scroll
@@ -41,29 +54,47 @@ export default function HeroCake() {
   const currentFrame = useTransform(scrollYProgress, [0, 1], [0, frameCount - 1]);
 
   useMotionValueEvent(currentFrame, "change", (latest) => {
-    if (!imagesLoaded || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     
     const context = canvasRef.current.getContext('2d');
     if (context) {
       const frameIndex = Math.floor(latest);
       const img = images.current[frameIndex];
       
-      if (img) {
+      // Estratégia de Fallback progressivo:
+      // Se a imagem exata do frame não estiver carregada ainda, desenha a imagem carregada mais próxima
+      let imgToDraw = img;
+      if (!imgToDraw || !imgToDraw.complete || imgToDraw.naturalWidth === 0) {
+        let found = false;
+        for (let j = frameIndex; j >= 0; j--) {
+          const tempImg = images.current[j];
+          if (tempImg && tempImg.complete && tempImg.naturalWidth !== 0) {
+            imgToDraw = tempImg;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          imgToDraw = images.current[0];
+        }
+      }
+      
+      if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth !== 0) {
         // Clear and draw
         context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         
         // Calculate scale to fit or cover
-        const hRatio = canvasRef.current.width / img.width;
-        const vRatio = canvasRef.current.height / img.height;
+        const hRatio = canvasRef.current.width / imgToDraw.width;
+        const vRatio = canvasRef.current.height / imgToDraw.height;
         const ratio = Math.max(hRatio, vRatio);
         
-        const centerShift_x = (canvasRef.current.width - img.width * ratio) / 2;
-        const centerShift_y = (canvasRef.current.height - img.height * ratio) / 2;  
+        const centerShift_x = (canvasRef.current.width - imgToDraw.width * ratio) / 2;
+        const centerShift_y = (canvasRef.current.height - imgToDraw.height * ratio) / 2;  
         
         context.drawImage(
-          img, 
-          0, 0, img.width, img.height,
-          centerShift_x, centerShift_y, img.width * ratio, img.height * ratio
+          imgToDraw, 
+          0, 0, imgToDraw.width, imgToDraw.height,
+          centerShift_x, centerShift_y, imgToDraw.width * ratio, imgToDraw.height * ratio
         );
       }
     }
@@ -71,10 +102,10 @@ export default function HeroCake() {
 
   // Draw first frame when loaded
   useEffect(() => {
-    if (imagesLoaded && canvasRef.current) {
+    if (firstFrameLoaded && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
       const img = images.current[0];
-      if (context && img) {
+      if (context && img && img.complete) {
         context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         const hRatio = canvasRef.current.width / img.width;
         const vRatio = canvasRef.current.height / img.height;
@@ -88,7 +119,7 @@ export default function HeroCake() {
         );
       }
     }
-  }, [imagesLoaded]);
+  }, [firstFrameLoaded]);
 
   // Partículas flutuantes ambientais
   const particleY = useTransform(scrollYProgress, [0, 1], [0, -150]);
