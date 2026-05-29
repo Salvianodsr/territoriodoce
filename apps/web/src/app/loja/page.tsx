@@ -19,7 +19,7 @@ interface Product {
   sellerName: string;
 }
 
-export default function Loja() {
+function LojaContent() {
   const { addToCart } = useStore();
   const searchParams = useSearchParams();
 
@@ -351,5 +351,17 @@ export default function Loja() {
 
       </div>
     </div>
+  );
+}
+
+export default function Loja() {
+  return (
+    <React.Suspense fallback={
+      <div className="w-full py-32 text-center text-sm font-medium text-chocolate/60 dark:text-cream/60">
+        Carregando a vitrine gourmet...
+      </div>
+    }>
+      <LojaContent />
+    </React.Suspense>
   );
 }
