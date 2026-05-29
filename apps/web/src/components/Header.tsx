@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, User as UserIcon, X, Trash2, Plus, Minus } from 'lucide-react';
+import { ShoppingBag, User as UserIcon, X, Trash2, Plus, Minus, Menu } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export default function Header() {
@@ -17,6 +17,7 @@ export default function Header() {
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Mocks de Login rápido para avaliação
   const mockRoles = [
@@ -139,8 +140,70 @@ export default function Header() {
               </span>
             )}
           </button>
+
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 hover:bg-velvet/5 rounded-full transition-colors text-chocolate/80 dark:text-cream/80"
+            title="Menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {/* MOBILE MENU DROPDOWN */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-velvet/10 dark:border-champagne/10 bg-cream-light/95 dark:bg-chocolate-dark/95 backdrop-blur-md transition-all duration-300 ease-in-out">
+          <nav className="flex flex-col p-6 space-y-4 font-display text-sm font-semibold text-chocolate/80 dark:text-cream/80">
+            <Link 
+              href="/loja" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-velvet dark:hover:text-champagne transition-colors py-2 border-b border-velvet/5 dark:border-champagne/5"
+            >
+              Loja
+            </Link>
+            <Link 
+              href="/encomenda" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-velvet dark:hover:text-champagne transition-colors py-2 border-b border-velvet/5 dark:border-champagne/5"
+            >
+              Sob Encomenda
+            </Link>
+            <Link 
+              href="/loja?occasion=casamento" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-velvet dark:hover:text-champagne transition-colors py-2 border-b border-velvet/5 dark:border-champagne/5"
+            >
+              Casamentos
+            </Link>
+            <Link 
+              href="/#sobre" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-velvet dark:hover:text-champagne transition-colors py-2 border-b border-velvet/5 dark:border-champagne/5"
+            >
+              O Ateliê
+            </Link>
+            <Link 
+              href="/#contato" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-velvet dark:hover:text-champagne transition-colors py-2"
+            >
+              Contato
+            </Link>
+            
+            {user && user.role !== 'CUSTOMER' && (
+              <Link 
+                href="/admin" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="bg-velvet/10 dark:bg-champagne/10 text-velvet dark:text-champagne px-4 py-2 rounded-xl text-xs font-bold hover:scale-105 transition-transform border border-velvet/20 dark:border-champagne/20 text-center"
+              >
+                Painel {user.role === 'ADMIN' ? 'Admin' : user.role === 'PASTRY_CHEF' ? 'Cozinha' : user.role === 'DELIVERY_DRIVER' ? 'Entregas' : 'Vendedor'}
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
 
       {/* PAINEL SIDEBAR DO CARRINHO */}
       {cartOpen && (
